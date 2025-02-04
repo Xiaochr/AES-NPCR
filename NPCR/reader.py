@@ -23,7 +23,7 @@ bert_tokenizer = BertTokenizer.from_pretrained(file, sep_token='[SEP]')
 
 url_replacer = '<url>'
 logger = utils.get_logger("Loading data...")
-num_regex = re.compile('^[+-]?[0-9]+\.?[0-9]*$')
+num_regex = re.compile(r'^[+-]?[0-9]+\.?[0-9]*$')
 ref_scores_dtype = 'int32'
 
 MAX_SENTLEN = 50
@@ -38,7 +38,8 @@ asap_ranges = {
     5: (-4, 4),
     6: (-4, 4),
     7: (-30, 30),
-    8: (-60, 60)
+    8: (-60, 60),
+    9: (-80, 80)
 }
 
 
@@ -114,7 +115,7 @@ def read_essays(file_path, prompt_id):
 
 
 def replace_url(text):
-    replaced_text = re.sub('(http[s]?://)?((www)\.)?([a-zA-Z0-9]+)\.{1}((com)(\.(cn))?|(org))', url_replacer, text)
+    replaced_text = re.sub(r'(http[s]?://)?((www)\.)?([a-zA-Z0-9]+)\.{1}((com)(\.(cn))?|(org))', url_replacer, text)
     return replaced_text
 
 

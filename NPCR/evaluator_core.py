@@ -6,6 +6,7 @@
 from utils import rescale_tointscore, get_logger
 from metrics import *
 import numpy as np
+import pandas as pd 
 import torch.utils.data as Data
 import torch
 
@@ -136,8 +137,8 @@ class Evaluator():
 
 
 class Evaluator_opti():
-    def __init__(self, prompt_id, use_char, out_dir, modelname, features_dev, dev_y_example, dev_y_goal, features_test, test_y_example, test_y_goal, example_size):
-        self.use_char = use_char
+    def __init__(self, prompt_id, out_dir, modelname, features_dev, dev_y_example, dev_y_goal, features_test, test_y_example, test_y_goal, example_size):
+        # self.use_char = use_char
         self.prompt_id = prompt_id
 
         self.features_dev = features_dev
@@ -152,10 +153,14 @@ class Evaluator_opti():
 
         self.out_dir = out_dir
         self.modelname = modelname
-        self.best_dev = [-1, -1, -1, -1]
-        self.dev_test = [-1, -1, -1, -1]
-        self.best_test= [-1, -1, -1, -1]
-        self.test_dev = [-1, -1, -1, -1]
+        # self.best_dev = [-1, -1, -1, -1]
+        # self.dev_test = [-1, -1, -1, -1]
+        # self.best_test= [-1, -1, -1, -1]
+        # self.test_dev = [-1, -1, -1, -1]
+        self.best_dev = [-1]
+        self.dev_test = [-1]
+        self.best_test= [-1]
+        self.test_dev = [-1]
 
         self.dev_loader, self.test_loader = self.init_data_loader()
 
@@ -169,6 +174,10 @@ class Evaluator_opti():
     def calc_kappa(self, train_pred, dev_pred, test_pred, weight='quadratic'):
         self.dev_qwk = kappa(self.dev_y_goal, dev_pred, weight)
         self.test_qwk = kappa(self.test_y_goal, test_pred, weight)
+    
+    def calc_qwk_sklearn(self, train_pred, dev_pred, test_pred):
+        self.dev_qwk = qwk_sklearn(self.dev_y_goal, dev_pred)
+        self.test_qwk = qwk_sklearn(self.test_y_goal, test_pred)
 
     def calc_rmse(self, train_pred, dev_pred, test_pred):
         self.dev_rmse = root_mean_square_error(self.dev_y_goal, dev_pred)
@@ -187,6 +196,18 @@ class Evaluator_opti():
             '[DEV-TEST]  QWK:  %.3f, PRS: %.3f, SPR: %.3f, RMSE: %.3f (Best @ %i: {{%.3f}}, %.3f, %.3f, %.3f)' % (
                 self.test_qwk, self.test_pr, self.test_spr, self.test_rmse, self.best_dev_epoch,
                 self.dev_test[0], self.dev_test[1], self.dev_test[2], self.dev_test[3]))
+
+        logger.info(
+            '--------------------------------------------------------------------------------------------------------------------------')
+    
+    def print_simple_info(self):
+        logger.info('[DEV]   QWK:  %.3f, (Best @ %i: {{%.3f}})' % (
+            self.dev_qwk, self.best_dev_epoch,
+            self.best_dev[0]))
+
+        logger.info('[TEST]  QWK:  %.3f, (Best @ %i: {{%.3f}})' % (
+            self.test_qwk, self.best_test_epoch,
+            self.best_test[0]))
 
         logger.info(
             '--------------------------------------------------------------------------------------------------------------------------')
@@ -220,24 +241,35 @@ class Evaluator_opti():
             test_pred_int.append(test_pred_i)
         test_pred_int = np.array(test_pred_int)
 
-        self.calc_correl(None, dev_pred_int, test_pred_int)
-        self.calc_kappa(None, dev_pred_int, test_pred_int)
-        self.calc_rmse(None, dev_pred_int, test_pred_int)
+        # self.calc_correl(None, dev_pred_int, test_pred_int)
+        # self.calc_kappa(None, dev_pred_int, test_pred_int)
+        # self.calc_rmse(None, dev_pred_int, test_pred_int)
+        self.calc_qwk_sklearn(None, dev_pred_int, test_pred_int)
 
         if self.dev_qwk > self.best_dev[0]:
-            self.best_dev = [self.dev_qwk, self.dev_pr, self.dev_spr, self.dev_rmse]
-            self.dev_test = [self.test_qwk, self.test_pr, self.test_spr, self.test_rmse]
+            self.best_dev = [self.dev_qwk]
+            self.dev_test = [self.test_qwk]
             self.best_dev_epoch = epoch
-            torch.save(model, self.out_dir + '/dev' + self.modelname)
+            torch.save(model, self.out_dir + '/dev' + self.modelname + ".pt")
+
+            res_df = pd.DataFrame([])
+            res_df["true_score"] = self.dev_y_goal.flatten()
+            res_df["pred_score"] = dev_pred_int.flatten()
+            res_df.to_csv(self.out_dir + '/preds/dev_' + self.modelname + ".csv")
 
         if self.test_qwk > self.best_test[0]:
-            self.best_test = [self.test_qwk, self.test_pr, self.test_spr, self.test_rmse]
-            self.test_dev = [self.dev_qwk, self.dev_pr, self.dev_spr, self.dev_rmse]
+            self.best_test = [self.test_qwk]
+            self.test_dev = [self.dev_qwk]
             self.best_test_epoch = epoch
-            torch.save(model, self.out_dir + '/test' + self.modelname)
+            torch.save(model, self.out_dir + '/test' + self.modelname + ".pt")
+
+            res_df = pd.DataFrame([])
+            res_df["true_score"] = self.test_y_goal.flatten()
+            res_df["pred_score"] = test_pred_int.flatten()
+            res_df.to_csv(self.out_dir + '/preds/test_' + self.modelname + ".csv")
 
         if print_info:
-            self.print_info()
+            self.print_simple_info()
 
     def init_data_loader(self):
         dev_x0 = [j[0] for j in self.features_dev]

@@ -17,7 +17,7 @@ import numpy as np
 from scipy.stats import kendalltau, spearmanr, pearsonr
 from six import string_types
 from six.moves import xrange as range
-from sklearn.metrics import confusion_matrix, f1_score, SCORERS
+from sklearn.metrics import confusion_matrix, f1_score, get_scorer, cohen_kappa_score
 # from sklearn.metrics import mean_squared_error
 
 
@@ -140,6 +140,19 @@ def kappa(y_true, y_pred, weights=None, allow_off_by_one=False):
     return k
 
 
+def qwk_sklearn(y_true, y_pred):
+    logger = logging.getLogger(__name__)
+    try:
+        y_true = [int(np.round(float(y))) for y in y_true]
+        y_pred = [int(np.round(float(y))) for y in y_pred]
+    except ValueError as e:
+        logger.error("For kappa, the labels should be integers or strings "
+                     "that can be converted to ints (E.g., '4.0' or '3').")
+        raise e
+    
+    qwk = cohen_kappa_score(y_true, y_pred, weights="quadratic")
+    return qwk
+
 
 def kendall_tau(y_true, y_pred):
     """
@@ -216,7 +229,7 @@ def use_score_func(func_name, y_true, y_pred):
     creating the scorer. This applies any sign-flipping that was specified by
     `make_scorer` when the scorer was created.
     """
-    scorer = SCORERS[func_name]
+    scorer = get_scorer[func_name]
     return scorer._sign * scorer._score_func(y_true, y_pred, **scorer._kwargs)
 
 

@@ -154,7 +154,7 @@ def rescale_tointscore(scaled_scores, set_ids):
     assert scaled_scores.shape[0] == len(set_ids)
     int_scores = np.zeros((scaled_scores.shape[0], 1))
     for k, i in enumerate(set_ids):
-        assert i in range(1, 9)
+        assert i in range(1, 10)
         if i == 1:
             minscore = -10
             maxscore = 10
@@ -173,6 +173,9 @@ def rescale_tointscore(scaled_scores, set_ids):
         elif i == 8:
             minscore = -60
             maxscore = 60
+        elif i == 9:
+            minscore = -80
+            maxscore = 80
         else:
             print("Set ID error")
         # minscore = 0

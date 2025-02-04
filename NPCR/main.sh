@@ -52,8 +52,8 @@ nb_epochs=80
 #echo "Using embedding ${embeddingfile}"
 
  # THEANO_FLAGS='floatX=float32,device=cpu'
- export CUDA_VISIBLE_DEVICES=2
- python main.py --fine_tune --num_epochs $nb_epochs --batch_size 6 \
+#  export CUDA_VISIBLE_DEVICES=2
+ python main.py --fine_tune --num_epochs $nb_epochs --batch_size 5 \
  --nbfilters 100 --filter1_len 5 --filter2_len 3 --rnn_type LSTM --lstm_units 100\
  	--optimizer rmsprop --learning_rate 0.00001 --dropout 0.5  \
 	--oov embedding  --checkpoint_path $checkdir \
